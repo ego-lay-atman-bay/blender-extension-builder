@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blender-extension-builder"
+authors = [
+  { name="ego-lay-atman-bay" },
+]
+description = "Build Blender extensions."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "toml",
+]
+dynamic = ["version"]
+
+[project.urls]
+"Homepage" = "https://github.com/ego-lay-atman-bay/blender-extension-builder"
+"Bug Tracker" = "https://github.com/ego-lay-atman-bay/blender-extension-builder/issues"
+"Documentation" = "https://ego-lay-atman-bay.github.io/blender-extension-builder/"
+
+[tool.setuptools]
+package-dir = {"build_blender_extension" = "build_blender_extension"}
+
+[tool.setuptools.dynamic]
+version = { attr = "build_blender_extension.__version__" }
+
+[project.scripts]
+build-blender-extension = 'build_blender_extension:main'
