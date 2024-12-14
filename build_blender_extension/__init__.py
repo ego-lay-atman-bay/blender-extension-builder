@@ -1,4 +1,4 @@
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __author__ = 'ego-lay-atman-bay'
 
 import subprocess
@@ -35,9 +35,10 @@ def gather_dependencies(blender_manifest: dict, wheel_dir: str, build: str):
         for dep in blender_manifest['dependencies']:
             build_wheel(dep, os.path.join(build, wheel_dir))
 
-    wheels.extend([os.path.join('./', wheel_dir, wheel).replace('\\', '/') for wheel in glob.glob('*.whl', root_dir = wheel_dir)])
+    wheels.extend([os.path.join(wheel_dir, wheel).replace('\\', '/') for wheel in glob.glob('*.whl', root_dir = os.path.join(build, wheel_dir))])
     
     blender_manifest['wheels'] = wheels
+    print('wheels', wheels)
     
     return blender_manifest
 
