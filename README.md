@@ -57,12 +57,17 @@ wheels = [
   './wheels/pillow-10.3.0-cp311-cp311-win_amd64.whl',
 ]
 
+# Use this if blender is skipping a wheel for python version
+# incompatibility (even though it's compatible)
+ensure_cp311 = true
+
 [build]
 # Some optional extra options were added to this table
 
 # Folder containing the source code of the extension. Defaults to the current directory
 source = './src'
-# Folder for where the extension will be stored with all the files (to build the extension). Defaults to ./build
+# Folder for where the extension will be stored
+# with all the files (to build the extension). Defaults to ./build
 build = './build'
 # Output folder for the built addon in the .zip file.
 dist = './dist'

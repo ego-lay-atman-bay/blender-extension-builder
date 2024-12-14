@@ -1,13 +1,15 @@
-__version__ = '1.0.1'
+__version__ = '1.2.0'
 __author__ = 'ego-lay-atman-bay'
 
-import subprocess
-import toml
-import os
-import glob
-import sys
 import argparse
+import glob
+import os
+import re
 import shutil
+import subprocess
+import sys
+
+import toml
 
 PYTHON_BINARY = shutil.which('blender')
 
@@ -31,14 +33,27 @@ def gather_dependencies(blender_manifest: dict, wheel_dir: str, build: str):
     if not isinstance(wheels, list):
         wheels = []
     
+    dir = os.path.join(build, wheel_dir)
     if 'dependencies' in blender_manifest:
         for dep in blender_manifest['dependencies']:
-            build_wheel(dep, os.path.join(build, wheel_dir))
+            build_wheel(dep, dir)
 
-    wheels.extend([os.path.join(wheel_dir, wheel).replace('\\', '/') for wheel in glob.glob('*.whl', root_dir = os.path.join(build, wheel_dir))])
+    ensure_cp311 = blender_manifest.get('ensure_cp311', False)
+
+    if ensure_cp311:
+        for wheel in glob.glob(
+            '*.whl',
+            root_dir = dir,
+        ):
+
+            os.rename(
+                os.path.join(dir, wheel),
+                os.path.join(dir, re.sub('cp\d+', 'cp311', wheel)),
+            )
     
+    wheels.extend([os.path.join(wheel_dir, wheel).replace('\\', '/') for wheel in glob.glob('*.whl', root_dir = os.path.join(build, wheel_dir))])
+
     blender_manifest['wheels'] = wheels
-    print('wheels', wheels)
     
     return blender_manifest
 
