@@ -59,7 +59,8 @@ wheels = [
 
 # Use this if blender is skipping a wheel for python version
 # incompatibility (even though it's compatible)
-ensure_cp311 = true
+# This can also be enabled in the commandline with `--ensure-cp311` or `-cp311`
+ensure-cp311 = true
 
 [build]
 # Some optional extra options were added to this table

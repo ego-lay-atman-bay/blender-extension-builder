@@ -25,7 +25,12 @@ def build_extension(src: str = './', dest: str = 'dist'):
         '--output-dir', dest,
     ])
 
-def gather_dependencies(blender_manifest: dict, wheel_dir: str, build: str):
+def gather_dependencies(
+    blender_manifest: dict,
+    wheel_dir: str,
+    build: str,
+    ensure_cp311: bool = False,
+):
     if os.path.exists(os.path.join(build, wheel_dir)):
         shutil.rmtree(os.path.join(build, wheel_dir), ignore_errors = True)
     
@@ -38,7 +43,8 @@ def gather_dependencies(blender_manifest: dict, wheel_dir: str, build: str):
         for dep in blender_manifest['dependencies']:
             build_wheel(dep, dir)
 
-    ensure_cp311 = blender_manifest.get('ensure_cp311', False)
+    if not ensure_cp311:
+        ensure_cp311 = blender_manifest.get('ensure-cp311', False)
 
     if ensure_cp311:
         for wheel in glob.glob(
@@ -60,6 +66,7 @@ def gather_dependencies(blender_manifest: dict, wheel_dir: str, build: str):
 def build(
     manifest: str,
     dist: str | None,
+    ensure_cp311: bool = False,
 ):
     if not os.path.isfile(manifest):
         raise FileNotFoundError(f'could not find "{manifest}"')
@@ -104,7 +111,12 @@ def build(
     
     
     
-    gather_dependencies(blender_manifest, wheel_path, build)
+    gather_dependencies(
+        blender_manifest,
+        wheel_path,
+        build,
+        ensure_cp311 = ensure_cp311,
+    )
     with open(os.path.join(build, 'blender_manifest.toml'), 'w') as file:
         toml.dump(blender_manifest, file)
     
@@ -128,9 +140,16 @@ def main():
         help = 'override dist folder',
     )
     
+    argparser.add_argument(
+        '-cp311', '--ensure-cp311',
+        dest = 'ensure_cp311',
+        action = 'store_true',
+        help = 'Renames any instance of "cp##" in wheels to "cp311" to make blender not ignore it. You won\'t have to use this with blender 4.3.1, but is an issue in 4.3.0 and 4.2.4 LTS.',
+    )
+    
     args = argparser.parse_args()
     
-    build(args.manifest, args.dist)
+    build(args.manifest, args.dist, ensure_cp311 = args.ensure_cp311)
     
 if __name__ == "__main__":
     main()
