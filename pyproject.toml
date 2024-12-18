@@ -34,3 +34,4 @@ version = { attr = "build_blender_extension.__version__" }
 
 [project.scripts]
 build-blender-extension = 'build_blender_extension:main'
+bbext = 'build_blender_extension:main'
