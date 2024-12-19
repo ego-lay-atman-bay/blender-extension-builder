@@ -24,7 +24,7 @@ dynamic = ["version"]
 [project.urls]
 "Homepage" = "https://github.com/ego-lay-atman-bay/blender-extension-builder"
 "Bug Tracker" = "https://github.com/ego-lay-atman-bay/blender-extension-builder/issues"
-"Documentation" = "https://ego-lay-atman-bay.github.io/blender-extension-builder/"
+# "Documentation" = "https://ego-lay-atman-bay.github.io/blender-extension-builder/"
 
 [tool.setuptools]
 package-dir = {"build_blender_extension" = "build_blender_extension"}
