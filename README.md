@@ -17,14 +17,32 @@ You also need Blender available on the PATH in order to build the extension.
 
 You can use the command
 
-```
+```shell
 build-blender-extension -h
-```
-
-Or
-
-```
+# or
+bbext -h
+# or
 python -m build_blender_extension -h
+```
+
+You can specify the manifest file with the `-m` argument, however if you run the command with no arguments, it will assume that the blender manifest is `blender_manifest.toml`.
+
+```shell
+bbext -m blender_manifest.toml
+```
+
+If you have any dependencies that have wheels that are built for multiple platforms, then you may want to grab them all.
+
+```shell
+bbext --all-wheels
+```
+
+However it can take up to 10 minutes to download (depending on how many dependencies it has to download), so this should only be used for distribution.
+
+This can be used in conjunction with `--split-platforms` to generate builds for each platform.
+
+```shell
+bbext -a --split-platforms
 ```
 
 ## Setting up `blender_manifest.toml`
@@ -44,7 +62,16 @@ license = [
   "SPDX:GPL-3.0-or-later",
 ]
 
-# Place dependencies here. They can be in any format that pip supports.
+# You can specify what platforms this can be used with.
+platforms = ["windows-x64", "windows-arm64", "macos-arm64", "macos-x64" , "linux-x64"]
+# NOTE: All wheels for all platforms will be downloaded in you specify `--all-wheels`
+# no matter which platforms are specified here.
+# NOTE: If `--all-wheels` is specified and the platforms are not specified, it will
+# download all the platforms, and generate builds for all platforms.
+
+# Place dependencies here. They have to be in the dependency format as specified in PEP 508.
+# https://packaging.python.org/en/latest/specifications/dependency-specifiers/#dependency-specifiers
+# (should be the same as in pyproject.toml files)
 dependencies = [
     'numpy'
 ]
@@ -87,3 +114,51 @@ build-blender-extension -m blender_manifest.toml
 ```
 
 Note: if you don't specify any arguments, it will try to use `blender_manifest.toml`.
+
+## Installing
+
+You can also auto install the extension after building directly with this command.
+
+```shell
+bbext --install
+```
+
+If you choose to also generate builds for all the platforms, it will install the universal build.
+
+## Other arguments
+
+There are many other options you can use.
+
+```
+usage: bbext [-h] [-m MANIFEST] [-d DIST] [-cp311] [-a] [--split-platforms] [-I] [-r REPO]
+             [-e] [--no-prefs]
+
+Build blender add-on with dependencies
+
+options:
+  -h, --help            show this help message and exit
+  -m MANIFEST, --manifest MANIFEST
+                        path to blender manifest
+  -d DIST, --dist DIST  override dist folder
+  -cp311, --ensure-cp311
+                        Renames any instance of "cp##" in wheels to "cp311" to make
+                        blender not ignore it. You won't have to use this with blender      
+                        4.3.1, but is an issue in 4.3.0 and 4.2.4 LTS.
+  -a, --all-wheels      Download all wheels packages for all platforms. May result in       
+                        large file sizes.
+  --split-platforms     Build a separate package for each platform. Adding the platform as  
+                        a file name suffix (before the extension). This can be useful to    
+                        reduce the upload size of packages that bundle large platform-      
+                        specific modules (``*.whl`` files).
+
+Install options:
+  Options for installing. If --install is omitted, all of these will be ignored.
+
+  -I, --install         Install the extension.
+  -r REPO, --repo REPO  The repository identifier.
+  -e, --enable          Enable the extension after installation.
+  --no-prefs            Treat the user-preferences as read-only, preventing updates for     
+                        operations that would otherwise modify them. This means removing    
+                        extensions or repositories for example, wont update the user-       
+                        preferences.
+```

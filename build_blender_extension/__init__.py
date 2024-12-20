@@ -1,4 +1,4 @@
-__version__ = '1.3.0'
+__version__ = '1.4.0'
 __author__ = 'ego-lay-atman-bay'
 
 import argparse
@@ -7,9 +7,12 @@ import os
 import re
 import shutil
 import subprocess
-import sys
+from textwrap import dedent
+import pathlib
 
 import toml
+
+from .package_management import download_packages
 
 BLENDER_BINARY = shutil.which('blender')
 
@@ -19,14 +22,12 @@ def check_blender_binary():
     
     return True
 
-def build_wheel(dep: str, dest: str = 'wheels'):
-    subprocess.run(['pip', 'wheel', dep, '-w', dest])
-
 def build_extension(
     blender_manifest: dict,
     src: str = './',
     dest: str = 'dist',
     output_filepath: str = '{id}-{version}.zip',
+    split_platforms: bool = False,
 ):
     full_path = os.path.join(dest, output_filepath.format(**blender_manifest))
 
@@ -47,13 +48,20 @@ def build_extension(
             command.extend([f'--{build_option}', build[build_option]])
     
     subprocess.run(command)
+    
+    if split_platforms:
+        command.append('--split-platforms')
+        subprocess.run(command)
 
 def gather_dependencies(
     blender_manifest: dict,
     wheel_dir: str,
     build: str,
-    ensure_cp311: bool = False,
+    ensure_cp311: bool | None = None,
+    all_wheels: bool = False,
+    python_version: str = '3.11',
 ):
+
     if os.path.exists(os.path.join(build, wheel_dir)):
         shutil.rmtree(os.path.join(build, wheel_dir), ignore_errors = True)
     
@@ -63,10 +71,18 @@ def gather_dependencies(
     
     dir = os.path.join(build, wheel_dir)
     if 'dependencies' in blender_manifest:
-        for dep in blender_manifest['dependencies']:
-            build_wheel(dep, dir)
+        dependencies = blender_manifest['dependencies']
+        wheels.extend(
+            os.path.relpath(wheel, build).replace('\\', '/') for wheel in download_packages(
+                dependencies,
+                dir,
+                no_deps = False,
+                all_wheels = all_wheels,
+                python_version = python_version,
+            )
+        )
 
-    if not ensure_cp311:
+    if ensure_cp311 is None:
         ensure_cp311 = blender_manifest.get('ensure-cp311', False)
 
     if ensure_cp311:
@@ -74,13 +90,23 @@ def gather_dependencies(
             '*.whl',
             root_dir = dir,
         ):
+            source = wheel
+            dest = re.sub('cp\d+', 'cp311', wheel)
 
+            if source in wheels:
+                wheels[wheels.index(source)] = dest
+            
             os.rename(
-                os.path.join(dir, wheel),
-                os.path.join(dir, re.sub('cp\d+', 'cp311', wheel)),
+                os.path.join(dir, source),
+                os.path.join(dir, dest),
             )
     
-    wheels.extend([os.path.join(wheel_dir, wheel).replace('\\', '/') for wheel in glob.glob('*.whl', root_dir = os.path.join(build, wheel_dir))])
+    wheels.extend([os.path.join(wheel_dir, wheel) for wheel in glob.glob('*.whl', root_dir = os.path.join(build, wheel_dir))])
+
+    for i, wheel in enumerate(wheels):
+        wheels[i] = os.path.join('./', pathlib.Path(wheel).as_posix())
+
+    wheels = list(dict.fromkeys(wheels))
 
     blender_manifest['wheels'] = wheels
     
@@ -91,6 +117,9 @@ def build(
     dist: str | None = None,
     output_filepath: str | None = None,
     ensure_cp311: bool = False,
+    all_wheels: bool = False,
+    split_platforms: bool = False,
+    python_version: str = '3.11',
 ) -> str:
     """Build blender extension
 
@@ -150,11 +179,20 @@ def build(
                 dst = os.path.join(build, path),
             )
     
+    if split_platforms:
+        platforms = blender_manifest.get('platforms')
+        if platforms is None:
+            platforms = ["windows-x64", "windows-arm64", "macos-arm64", "macos-x64" , "linux-x64"]
+        
+        blender_manifest['platforms'] = platforms
+    
     gather_dependencies(
         blender_manifest,
         wheel_path,
         build,
         ensure_cp311 = ensure_cp311,
+        all_wheels = all_wheels,
+        python_version = python_version,
     )
     with open(os.path.join(build, 'blender_manifest.toml'), 'w') as file:
         toml.dump(blender_manifest, file)
@@ -166,6 +204,7 @@ def build(
         build,
         dist,
         output_filepath,
+        split_platforms = split_platforms,
     )
     
     return os.path.abspath(os.path.join(dist, output_filepath))
@@ -192,6 +231,9 @@ def install(
         print(f'Failed to install')
     else:
         print('Successfully installed extension')
+
+def merge(files: list[str]):
+    pass
     
 def main():
     argparser = argparse.ArgumentParser(
@@ -216,6 +258,25 @@ def main():
         dest = 'ensure_cp311',
         action = 'store_true',
         help = 'Renames any instance of "cp##" in wheels to "cp311" to make blender not ignore it. You won\'t have to use this with blender 4.3.1, but is an issue in 4.3.0 and 4.2.4 LTS.',
+    )
+    
+    argparser.add_argument(
+        '-a', '--all-wheels',
+        dest = 'all_wheels',
+        action = 'store_true',
+        help = 'Download all wheels packages for all platforms. May result in large file sizes.',
+    )
+    
+    argparser.add_argument(
+        '--split-platforms',
+        dest = 'split_platforms',
+        action = 'store_true',
+        help = dedent("""\
+            Build a separate package for each platform.
+            Adding the platform as a file name suffix (before the extension).
+
+            This can be useful to reduce the upload size of packages that bundle large       
+            platform-specific modules (``*.whl`` files)."""),
     )
     
     install_parser = argparser.add_argument_group(
@@ -255,7 +316,13 @@ def main():
         print(e)
         exit()
     
-    output = build(args.manifest, args.dist, ensure_cp311 = args.ensure_cp311)
+    output = build(
+        args.manifest,
+        args.dist,
+        ensure_cp311 = args.ensure_cp311,
+        all_wheels = args.all_wheels,
+        split_platforms = args.split_platforms,
+    )
 
     if args.install:
         install(

@@ -18,6 +18,9 @@ classifiers = [
 ]
 dependencies = [
   "toml",
+  "packaging",
+  "requests",
+  "pipgrip",
 ]
 dynamic = ["version"]
 

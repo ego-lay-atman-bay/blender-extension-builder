@@ -1,1 +1,4 @@
 toml
+packaging
+requests
+pipgrip
