@@ -113,7 +113,7 @@ def gather_dependencies(
     return blender_manifest
 
 def build(
-    manifest: str,
+    manifest_path: str,
     dist: str | None = None,
     output_filepath: str | None = None,
     ensure_cp311: bool = False,
@@ -135,10 +135,10 @@ def build(
     Returns:
         str: Path to build extension.
     """
-    if not os.path.isfile(manifest):
-        raise FileNotFoundError(f'could not find "{manifest}"')
+    if not os.path.isfile(manifest_path):
+        raise FileNotFoundError(f'could not find "{manifest_path}"')
     
-    with open(manifest, 'r') as path:
+    with open(manifest_path, 'r') as path:
         blender_manifest = toml.load(path)
     
     if dist is None:
@@ -150,7 +150,7 @@ def build(
     build = blender_manifest.get('build', {}).get('build', './build')
     src = blender_manifest.get('build', {}).get('source', './')
     ignore = blender_manifest.get('build', {}).get('paths_exclude_pattern', [])
-    include = blender_manifest.get('build', {}).get('paths_include', [])
+    include = blender_manifest.get('build', {}).get('paths', [])
     wheel_path = blender_manifest.get('wheel-path', './wheels')
     
     if os.path.exists(build):
@@ -164,18 +164,19 @@ def build(
         dirs_exist_ok = True,
     )
     for path in include:
-        if os.path.isdir(path):
+        path_src = os.path.join(os.path.dirname(manifest_path), path)
+        if os.path.isdir(path_src):
             os.makedirs(os.path.join(build, path), exist_ok = True)
             shutil.copytree(
-                src = path,
+                src = path_src,
                 dst = os.path.join(build, path),
                 ignore = shutil.ignore_patterns(*ignore),
                 dirs_exist_ok = True,
             )
-        elif os.path.isfile(path):
+        elif os.path.isfile(path_src):
             os.makedirs(os.path.join(build, os.path.dirname(path)), exist_ok = True)
             shutil.copy(
-                src = path,
+                src = path_src,
                 dst = os.path.join(build, path),
             )
     
