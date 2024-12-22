@@ -59,6 +59,7 @@ def gather_dependencies(
     build: str,
     ensure_cp311: bool | None = None,
     all_wheels: bool = False,
+    platforms: list[str] = None,
     python_version: str = '3.11',
 ):
 
@@ -69,18 +70,21 @@ def gather_dependencies(
     if not isinstance(wheels, list):
         wheels = []
     
+    used_platforms = platforms.copy()
+    
     dir = os.path.join(build, wheel_dir)
     if 'dependencies' in blender_manifest:
         dependencies = blender_manifest['dependencies']
-        wheels.extend(
-            os.path.relpath(wheel, build).replace('\\', '/') for wheel in download_packages(
-                dependencies,
-                dir,
-                no_deps = False,
-                all_wheels = all_wheels,
-                python_version = python_version,
-            )
+        downloaded_wheels, used_platforms = download_packages(
+            dependencies,
+            dir,
+            no_deps = False,
+            all_wheels = all_wheels,
+            python_version = python_version,
+            platforms = platforms,
         )
+        wheels.extend(os.path.relpath(wheel, build).replace('\\', '/') for wheel in downloaded_wheels)
+
 
     if ensure_cp311 is None:
         ensure_cp311 = blender_manifest.get('ensure-cp311', False)
@@ -109,6 +113,7 @@ def gather_dependencies(
     wheels = list(dict.fromkeys(wheels))
 
     blender_manifest['wheels'] = wheels
+    blender_manifest['platforms'] = used_platforms
     
     return blender_manifest
 
@@ -193,6 +198,7 @@ def build(
         build,
         ensure_cp311 = ensure_cp311,
         all_wheels = all_wheels,
+        platforms = platforms,
         python_version = python_version,
     )
     with open(os.path.join(build, 'blender_manifest.toml'), 'w') as file:

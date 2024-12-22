@@ -37,7 +37,7 @@ If you have any dependencies that have wheels that are built for multiple platfo
 bbext --all-wheels
 ```
 
-However it can take up to 10 minutes to download (depending on how many dependencies it has to download), so this should only be used for distribution.
+However it may take a while to download all the wheels, so this should only be used for distribution.
 
 This can be used in conjunction with `--split-platforms` to generate builds for each platform.
 
@@ -101,7 +101,7 @@ build = './build'
 dist = './dist'
 
 # This contains a list of files or folders to keep in the built extension.
-paths_include = [
+paths = [
   'LICENSE',
   'README.md',
 ]
