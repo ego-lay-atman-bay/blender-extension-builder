@@ -1,7 +1,7 @@
 from enum import StrEnum
 
-from packaging.version import Version
 from packaging.specifiers import SpecifierSet
+from packaging.version import Version
 
 BLENDER_PLATFORMS = [
     "windows-x64",
