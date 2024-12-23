@@ -256,7 +256,7 @@ def merge(files: list[str]):
     
 def main():
     argparser = argparse.ArgumentParser(
-        description = 'Build blender add-on with dependencies',
+        description = 'Build blender extension with dependencies',
     )
     
     argparser.add_argument(

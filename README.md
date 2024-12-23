@@ -130,10 +130,10 @@ If you choose to also generate builds for all the platforms, it will install the
 There are many other options you can use.
 
 ```
-usage: bbext [-h] [-m MANIFEST] [-d DIST] [-cp311] [-a] [--split-platforms] [-I] [-r REPO]
-             [-e] [--no-prefs]
+usage: bbext [-h] [-m MANIFEST] [-d DIST] [-cp311] [-a] [--split-platforms]
+             [--python PYTHON_VERSION] [-I] [-r REPO] [-e] [--no-prefs]
 
-Build blender add-on with dependencies
+Build blender extension with dependencies
 
 options:
   -h, --help            show this help message and exit
@@ -141,15 +141,18 @@ options:
                         path to blender manifest
   -d DIST, --dist DIST  override dist folder
   -cp311, --ensure-cp311
-                        Renames any instance of "cp##" in wheels to "cp311" to make
-                        blender not ignore it. You won't have to use this with blender      
-                        4.3.1, but is an issue in 4.3.0 and 4.2.4 LTS.
-  -a, --all-wheels      Download all wheels packages for all platforms. May result in       
-                        large file sizes.
-  --split-platforms     Build a separate package for each platform. Adding the platform as  
-                        a file name suffix (before the extension). This can be useful to    
-                        reduce the upload size of packages that bundle large platform-      
+                        Renames any instance of "cp##" in wheels to "cp311" to make blender  
+                        not ignore it. You won't have to use this with blender 4.3.1, but    
+                        is an issue in 4.3.0 and 4.2.4 LTS.
+  -a, --all-wheels      Download all wheels packages for all platforms. May result in large  
+                        file sizes.
+  --split-platforms     Build a separate package for each platform. Adding the platform as   
+                        a file name suffix (before the extension). This can be useful to     
+                        reduce the upload size of packages that bundle large platform-       
                         specific modules (``*.whl`` files).
+  --python PYTHON_VERSION
+                        Python version to use. Defaults to the python version the minimum    
+                        blender version uses (most likely 3.11).
 
 Install options:
   Options for installing. If --install is omitted, all of these will be ignored.
@@ -157,8 +160,8 @@ Install options:
   -I, --install         Install the extension.
   -r REPO, --repo REPO  The repository identifier.
   -e, --enable          Enable the extension after installation.
-  --no-prefs            Treat the user-preferences as read-only, preventing updates for     
-                        operations that would otherwise modify them. This means removing    
-                        extensions or repositories for example, wont update the user-       
+  --no-prefs            Treat the user-preferences as read-only, preventing updates for      
+                        operations that would otherwise modify them. This means removing     
+                        extensions or repositories for example, wont update the user-        
                         preferences.
 ```
