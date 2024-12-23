@@ -483,7 +483,7 @@ def download_packages(
                             logging.debug(f'{output_filename} already downloaded')
                             continue
                         
-                        logging.info('downloading', wheel['info']['filename'])
+                        logging.info(f'downloading {wheel["info"]["filename"]}')
                         data = download_url(wheel['info']['url'])
                         with open(output_filename, 'wb') as file:
                             file.write(data)
