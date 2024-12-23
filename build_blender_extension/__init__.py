@@ -209,6 +209,10 @@ def build(
         all_wheels = all_wheels,
         python_version = python_version,
     )
+
+    if blender_manifest.get('build', {}).get('paths') is not None and blender_manifest.get('build', {}).get('paths_exclude_pattern') is not None:
+        del blender_manifest['build']['paths']
+    
     with open(os.path.join(build, 'blender_manifest.toml'), 'w') as file:
         toml.dump(blender_manifest, file)
     
