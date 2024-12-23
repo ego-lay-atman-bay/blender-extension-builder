@@ -162,13 +162,17 @@ def build(
         
         python_version = get_blender_python(blender_version_min)
     
-    build = blender_manifest.get('build', {}).get('build', './build')
-    src = blender_manifest.get('build', {}).get('source', './')
+    manifest_dir = os.path.dirname(os.path.abspath(manifest_path))
+    
+    build = os.path.abspath(os.path.join(manifest_dir, blender_manifest.get('build', {}).get('build', './build')))
+    src = os.path.abspath(os.path.join(manifest_dir, blender_manifest.get('build', {}).get('source', './')))
     ignore = blender_manifest.get('build', {}).get('paths_exclude_pattern', [])
     include = blender_manifest.get('build', {}).get('paths', [])
     wheel_path = blender_manifest.get('wheel-path', './wheels')
     
     if os.path.exists(build):
+        if os.path.samefile(build, manifest_dir) or os.path.samefile(build, src):
+            raise FileExistsError('Build directory cannot be root or source')
         shutil.rmtree(build, ignore_errors = True)
     os.makedirs(build, exist_ok = True)
 
@@ -179,7 +183,7 @@ def build(
         dirs_exist_ok = True,
     )
     for path in include:
-        path_src = os.path.join(os.path.dirname(manifest_path), path)
+        path_src = os.path.join(manifest_dir, path)
         if os.path.isdir(path_src):
             os.makedirs(os.path.join(build, path), exist_ok = True)
             shutil.copytree(
