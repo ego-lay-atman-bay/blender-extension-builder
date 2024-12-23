@@ -108,8 +108,7 @@ def download_wheels(
         package = Requirement(package)
         if package.url:
             packages[i] = package.url
-            if os.path.exists(package.url):
-                download_method = 'wheel'
+            download_method = 'wheel'
     
     with tempfile.TemporaryDirectory() as tempdir:
         if download_method == 'wheel':

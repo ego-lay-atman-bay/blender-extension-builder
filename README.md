@@ -75,6 +75,11 @@ platforms = ["windows-x64", "windows-arm64", "macos-arm64", "macos-x64" , "linux
 dependencies = [
     'numpy'
 ]
+# dependencies can also be a path to a file. This does not follow the same rules as requirements.txt
+# It instead follows the same rules as dependencies as a list, just with each line being a dependency.
+# This can be used if you have some local paths you don't want sharing to the public.
+dependencies = 'dependencies.txt'
+
 # Folder to store the wheels in the addon.
 wheel-path = './wheels'
 

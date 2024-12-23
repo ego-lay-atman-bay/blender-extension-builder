@@ -206,6 +206,16 @@ def build(
         
         blender_manifest['platforms'] = platforms
     
+    raw_dependencies = blender_manifest.get('dependencies')
+    if isinstance(raw_dependencies, str):
+        if os.path.isfile(os.path.join(manifest_dir, raw_dependencies)):
+            with open(os.path.join(manifest_dir, raw_dependencies), 'r') as file_in:
+                dependencies = file_in.readlines()
+            
+            blender_manifest['dependencies'] = dependencies
+        else:
+            raise TypeError('dependencies can only be list of dependencies or path to a dependencies.txt')
+    
     gather_dependencies(
         blender_manifest,
         wheel_path,
