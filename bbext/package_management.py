@@ -88,7 +88,7 @@ def parse_python_tag(tag: str):
 
 
 def download_wheels(
-    package: str | list[str],
+    packages: str | list[str],
     output_folder: str = './',
     no_deps: bool = False,
     platforms: list[str] | None = None,
@@ -98,8 +98,21 @@ def download_wheels(
     result = []
     
     command = [sys.executable, '-m', 'pip', '--isolated', '--disable-pip-version-check']
+    
+    download_method = 'download'
+    
+    if isinstance(packages, str):
+        packages = [packages]
+    
+    for i, package in enumerate(packages):
+        package = Requirement(package)
+        if package.url:
+            packages[i] = package.url
+            if os.path.exists(package.url):
+                download_method = 'wheel'
+    
     with tempfile.TemporaryDirectory() as tempdir:
-        if platforms is None and python_version is not None:
+        if download_method == 'wheel':
             command.extend(['wheel'])
             
             if no_deps:
@@ -116,12 +129,8 @@ def download_wheels(
             if abis is not None:
                 for abi in abis:
                     command.extend(['--abi', abi])
-        
-        
-        if isinstance(package, str):
-            command.append(package)
-        else:
-            command.extend(package)
+            
+        command.extend(packages)
             
         log_level = logging.root.getEffectiveLevel()
 
