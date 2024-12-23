@@ -98,7 +98,7 @@ def download_wheels(
     
     command = [sys.executable, '-m', 'pip', '--isolated', '--disable-pip-version-check']
     with tempfile.TemporaryDirectory() as tempdir:
-        if platforms is None:
+        if platforms is None and python_version is not None:
             command.extend(['wheel'])
             
             if no_deps:
@@ -106,7 +106,7 @@ def download_wheels(
 
             command.extend(['-w', tempdir])
         else:
-            command.extend(['download', '--dest', tempdir, '--only-binary=:all:'])
+            command.extend(['download', '--dest', tempdir, '--only-binary', ':all:'])
             if python_version is not None:
                 command.extend(['--python-version', python_version])
             if platforms is not None:
@@ -397,20 +397,21 @@ def download_packages(
             packages,
             output_folder,
             no_deps = no_deps,
+            python_version = python_version,
         )
         result.extend(wheels)
     else:
         print('gathering dependencies')
         dependencies = get_dependencies(packages)
         packages_by_platform: dict[str, list[dict]] = {}
-        files_to_download = []
 
         for dependency in dependencies:
             requirement = Requirement(dependency)
 
             if requirement.url is not None:
                 for platform in platforms:
-                    packages_by_platform.setdefault(platform, []).append({
+                    packages_by_platform.setdefault(platform, {}).setdefault('names', set()).add(str(requirement))
+                    packages_by_platform.setdefault(platform, {}).setdefault('files', []).append({
                         'name': requirement.name,
                         'type': 'url',
                         'requirement': requirement,
@@ -430,33 +431,35 @@ def download_packages(
                 if platform == 'any':
                     print(f'adding {requirement.name} to all')
                     for platform_name in platforms:
-                        packages_by_platform.setdefault(platform_name, []).append({
+                        packages_by_platform.setdefault(platform_name, {}).setdefault('names', set()).add(str(requirement))
+                        packages_by_platform.setdefault(platform_name, {}).setdefault('files', []).append({
                             'name': requirement.name,
                             'type': 'direct',
                             'wheels': wheels,
                         })
                 else:
                     print(f'adding {requirement.name} to {platform}')
-                    packages_by_platform.setdefault(platform, []).append({
+                    packages_by_platform.setdefault(platform, {}).setdefault('names', set()).add(str(requirement))
+                    packages_by_platform.setdefault(platform, {}).setdefault('files', []).append({
                         'name': requirement.name,
                         'type': 'direct',
                         'wheels': wheels,
                     })
         
-        print(f'amount of deps {len(dependencies)}')
+        print('\n'.join(dependencies))
         
-        for platform, reqs in packages_by_platform.items():
-            print(f'{platform} | {len(reqs)}')
+        for platform, requirements in packages_by_platform.items():
+            print(f'{platform} | {len(requirements["names"])} | {len(requirements["files"])}')
         
-        platforms_to_download = {platform: reqs for platform, reqs in packages_by_platform.items() if len(reqs) >= len(dependencies)}
+        platforms_to_download = {platform: requirements for platform, requirements in packages_by_platform.items() if len(requirements['names']) >= len(dependencies)}
         used_platforms = list(platforms_to_download.keys())
         if 'any' in used_platforms:
             used_platforms.remove('any')
         
         downloaded_urls = []
         
-        for requirements in packages_by_platform.values():
-            for requirement in requirements:
+        for requirements in platforms_to_download.values():
+            for requirement in requirements['files']:
                 if requirement['type'] == 'url':
                     if str(requirement['requirement']) in downloaded_urls:
                         continue

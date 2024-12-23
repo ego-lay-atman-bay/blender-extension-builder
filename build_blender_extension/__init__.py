@@ -4,14 +4,15 @@ __author__ = 'ego-lay-atman-bay'
 import argparse
 import glob
 import os
+import pathlib
 import re
 import shutil
 import subprocess
 from textwrap import dedent
-import pathlib
 
 import toml
 
+from .constents import BLENDER_PLATFORMS, get_blender_python
 from .package_management import download_packages
 
 BLENDER_BINARY = shutil.which('blender')
@@ -59,7 +60,6 @@ def gather_dependencies(
     build: str,
     ensure_cp311: bool | None = None,
     all_wheels: bool = False,
-    platforms: list[str] = None,
     python_version: str = '3.11',
 ):
 
@@ -69,6 +69,8 @@ def gather_dependencies(
     wheels = blender_manifest.get('wheels', [])
     if not isinstance(wheels, list):
         wheels = []
+    
+    platforms = blender_manifest.get('platforms', BLENDER_PLATFORMS.copy())
     
     used_platforms = platforms.copy()
     
@@ -85,6 +87,8 @@ def gather_dependencies(
         )
         wheels.extend(os.path.relpath(wheel, build).replace('\\', '/') for wheel in downloaded_wheels)
 
+    if len(used_platforms) == 0:
+        print('WARNING: Could not find any compatible dependencies')
 
     if ensure_cp311 is None:
         ensure_cp311 = blender_manifest.get('ensure-cp311', False)
@@ -124,7 +128,7 @@ def build(
     ensure_cp311: bool = False,
     all_wheels: bool = False,
     split_platforms: bool = False,
-    python_version: str = '3.11',
+    python_version: str | None = '3.11',
 ) -> str:
     """Build blender extension
 
@@ -151,6 +155,11 @@ def build(
     
     if output_filepath is None:
         output_filepath = blender_manifest.get('build', {}).get('output-filepath', '{id}-{version}.zip')
+    
+    if python_version is None:
+        blender_version_min = blender_manifest.get('blender_version_min', '4.2.0')
+        
+        python_version = get_blender_python(blender_version_min)
     
     build = blender_manifest.get('build', {}).get('build', './build')
     src = blender_manifest.get('build', {}).get('source', './')
@@ -198,7 +207,6 @@ def build(
         build,
         ensure_cp311 = ensure_cp311,
         all_wheels = all_wheels,
-        platforms = platforms,
         python_version = python_version,
     )
     with open(os.path.join(build, 'blender_manifest.toml'), 'w') as file:
@@ -285,6 +293,11 @@ def main():
             This can be useful to reduce the upload size of packages that bundle large       
             platform-specific modules (``*.whl`` files)."""),
     )
+    argparser.add_argument(
+        '--python',
+        dest = 'python_version',
+        help = 'Python version to use. Defaults to the python version the minimum blender version uses (most likely 3.11).',
+    )
     
     install_parser = argparser.add_argument_group(
         'Install options',
@@ -329,6 +342,7 @@ def main():
         ensure_cp311 = args.ensure_cp311,
         all_wheels = args.all_wheels,
         split_platforms = args.split_platforms,
+        python_version = args.python_version,
     )
 
     if args.install:
