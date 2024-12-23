@@ -3,6 +3,7 @@ __author__ = 'ego-lay-atman-bay'
 
 import argparse
 import glob
+import logging
 import os
 import pathlib
 import re
@@ -88,7 +89,7 @@ def gather_dependencies(
         wheels.extend(os.path.relpath(wheel, build).replace('\\', '/') for wheel in downloaded_wheels)
 
     if len(used_platforms) == 0:
-        print('WARNING: Could not find any compatible dependencies')
+        logging.warning('Could not find any compatible dependencies')
 
     if ensure_cp311 is None:
         ensure_cp311 = blender_manifest.get('ensure-cp311', False)
@@ -244,19 +245,36 @@ def install(
     if no_prefs:
         command.append('--no-prefs')
     
-    print(f'Installing {os.path.relpath(extension_path)}')
+    logging.info(f'Installing {os.path.relpath(extension_path)}')
     result = subprocess.run(command)
     if result.returncode != 0:
-        print(f'Failed to install')
+        logging.error(f'Failed to install')
     else:
-        print('Successfully installed extension')
+        logging.info('Successfully installed extension')
 
 def merge(files: list[str]):
-    pass
+    raise NotImplementedError()
+
+def setup_logger(level = logging.INFO):
+    if isinstance(level, str):
+        level = logging._nameToLevel.get(level.upper(), logging.INFO)
+    
+    logging.basicConfig(
+        level = level,
+        format = '[%(levelname)s] %(message)s',
+    )
+    logging.captureWarnings(True)
     
 def main():
     argparser = argparse.ArgumentParser(
         description = 'Build blender extension with dependencies',
+    )
+    
+    argparser.add_argument(
+        '--verbosity', '-v',
+        dest = 'log_level',
+        help = f'log level {{{", ".join(logging._nameToLevel.keys())}}}',
+        default = logging.INFO,
     )
     
     argparser.add_argument(
@@ -334,10 +352,12 @@ def main():
     
     args = argparser.parse_args()
     
+    setup_logger(args.log_level)
+    
     try:
         check_blender_binary()
     except FileNotFoundError as e:
-        print(e)
+        logging.error(e)
         exit()
     
     output = build(

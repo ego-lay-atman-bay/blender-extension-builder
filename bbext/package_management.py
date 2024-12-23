@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 import subprocess
@@ -121,6 +122,13 @@ def download_wheels(
             command.append(package)
         else:
             command.extend(package)
+            
+        log_level = logging.root.getEffectiveLevel()
+
+        if log_level > logging.INFO:
+            for level in [logging.WARNING, logging.ERROR, logging.CRITICAL]:
+                if log_level > level:
+                    command.append('-q')
         
         os.makedirs(output_folder, exist_ok = True)
     
@@ -142,7 +150,7 @@ def download_wheels(
                 )
                 result.append(os.path.join(output_folder, wheel))
             except FileExistsError:
-                print(f'{os.path.join(output_folder, wheel)} already exists')
+                logging.debug(f'{os.path.join(output_folder, wheel)} already exists')
     
     return result
 
@@ -401,7 +409,7 @@ def download_packages(
         )
         result.extend(wheels)
     else:
-        print('gathering dependencies')
+        logging.info('gathering dependencies')
         dependencies = get_dependencies(packages)
         packages_by_platform: dict[str, list[dict]] = {}
 
@@ -429,7 +437,7 @@ def download_packages(
             
             for platform, wheels in by_platform.items():
                 if platform == 'any':
-                    print(f'adding {requirement.name} to all')
+                    logging.debug(f'adding {requirement.name} to all')
                     for platform_name in platforms:
                         packages_by_platform.setdefault(platform_name, {}).setdefault('names', set()).add(str(requirement))
                         packages_by_platform.setdefault(platform_name, {}).setdefault('files', []).append({
@@ -438,7 +446,7 @@ def download_packages(
                             'wheels': wheels,
                         })
                 else:
-                    print(f'adding {requirement.name} to {platform}')
+                    logging.debug(f'adding {requirement.name} to {platform}')
                     packages_by_platform.setdefault(platform, {}).setdefault('names', set()).add(str(requirement))
                     packages_by_platform.setdefault(platform, {}).setdefault('files', []).append({
                         'name': requirement.name,
@@ -446,10 +454,8 @@ def download_packages(
                         'wheels': wheels,
                     })
         
-        print('\n'.join(dependencies))
-        
         for platform, requirements in packages_by_platform.items():
-            print(f'{platform} | {len(requirements["names"])} | {len(requirements["files"])}')
+            logging.debug(f'{platform} | {len(requirements["names"])} | {len(requirements["files"])}')
         
         platforms_to_download = {platform: requirements for platform, requirements in packages_by_platform.items() if len(requirements['names']) >= len(dependencies)}
         used_platforms = list(platforms_to_download.keys())
@@ -474,10 +480,10 @@ def download_packages(
                         wheel = files[0]
                         output_filename = os.path.join(output_folder, wheel['info']['filename'])
                         if output_filename in result:
-                            print(f'{output_filename} already downloaded')
+                            logging.debug(f'{output_filename} already downloaded')
                             continue
                         
-                        print('downloading', wheel['info']['filename'])
+                        logging.info('downloading', wheel['info']['filename'])
                         data = download_url(wheel['info']['url'])
                         with open(output_filename, 'wb') as file:
                             file.write(data)
