@@ -30,11 +30,11 @@ dynamic = ["version"]
 # "Documentation" = "https://ego-lay-atman-bay.github.io/blender-extension-builder/"
 
 [tool.setuptools]
-package-dir = {"build_blender_extension" = "build_blender_extension"}
+package-dir = {"bbext" = "bbext"}
 
 [tool.setuptools.dynamic]
-version = { attr = "build_blender_extension.__version__" }
+version = { attr = "bbext.__version__" }
 
 [project.scripts]
-build-blender-extension = 'build_blender_extension:main'
-bbext = 'build_blender_extension:main'
+build-blender-extension = 'bbext:main'
+bbext = 'bbext:main'
