@@ -243,12 +243,66 @@ def build(
     
     return os.path.abspath(os.path.join(dist, output_filepath))
 
+def disable_extension(
+    module: str,
+    repo: str = 'user_default',
+):
+    script = """\
+import logging
+
+def setup_logger(level = logging.INFO):
+    if isinstance(level, str):
+        level = logging._nameToLevel.get(level.upper(), logging.INFO)
+    
+    logging.basicConfig(
+        level = level,
+        format = '[%(levelname)s] %(message)s',
+    )
+    logging.captureWarnings(True)
+
+
+
+import bpy
+import sys
+args = sys.argv
+if '--' in args:
+  args = args[args.index('--')+1:]
+module = args[0]
+repo = args[1]
+full_name = f'bl_ext.{repo}.{module}'
+setup_logger(args[2])
+
+try:
+  logging.info(f'Disabling extension {full_name}')
+  bpy.ops.preferences.addon_disable(module=full_name)
+  logging.info(f'Successfully disabled {full_name}')
+except:
+  logging.info(f'extension {full_name} could either not be found or is already disabled')
+"""
+    
+    command = [
+        BLENDER_BINARY, '--quiet', '--background',
+        '--python-expr', script,
+        '--', module, repo, logging._levelToName[logging.root.getEffectiveLevel()],
+    ]
+    
+    subprocess.run(command)
+
 def install(
     extension_path: str,
+    manifest_path: str,
     repo: str = 'user_default',
     enable: bool = False,
     no_prefs: bool = False,
 ):
+    with open(manifest_path, 'r') as file:
+        manifest = toml.load(file)
+
+    disable_extension(
+        manifest.get('id'),
+        repo = repo,
+    )
+    
     command = [
         BLENDER_BINARY, '--command', 'extension', 'install-file',
         extension_path,
@@ -386,6 +440,7 @@ def main():
     if args.install:
         install(
             output,
+            manifest_path = args.manifest,
             repo = args.repo,
             enable = args.enable,
             no_prefs = args.no_prefs,

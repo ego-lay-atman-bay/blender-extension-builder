@@ -130,6 +130,19 @@ bbext --install
 
 If you choose to also generate builds for all the platforms, it will install the universal build.
 
+This command will also attempt to disable the extension to make blender remove all the wheels. This is useful because blender doesn't refresh the wheels after installing, you have to disable then enable the extension in order to refresh.
+
+Since this command disables the extension, you may want to also use `--enable` so you can keep the extension enabled every time you reinstall it.
+
+> [!NOTE]
+> When disabling extensions with wheels, blender may say something like this
+>
+>```
+>Failed to remove: (<built-in function unlink>, '...\\Blender Foundation\\Blender\\4.3\\extensions\\.local\\lib\\python3.11\\site-packages\\PIL\\_imaging.cp311-win_amd64.pyd', (<class 'PermissionError'>, PermissionError(13, 'Access is denied'), <traceback object at 0x000001FF9ABB01C0>))
+>```
+>
+> This doesn't really mean anything, and the package is indeed removed. The extension will work just fine on the next launch.
+
 ## Other arguments
 
 There are many other options you can use.
