@@ -106,18 +106,18 @@ def disable_extension(
             import sys
             args = sys.argv
             if '--' in args:
-            args = args[args.index('--')+1:]
+                args = args[args.index('--')+1:]
             module = args[0]
             repo = args[1]
             full_name = f'bl_ext.{repo}.{module}'
             setup_logger(args[2])
 
             try:
-            logging.info(f'Disabling extension {full_name}')
-            bpy.ops.preferences.addon_disable(module=full_name)
-            logging.info(f'Successfully disabled {full_name}')
+                logging.info(f'Disabling extension {full_name}')
+                bpy.ops.preferences.addon_disable(module=full_name)
+                logging.info(f'Successfully disabled {full_name}')
             except:
-            logging.info(f'extension {full_name} could either not be found or is already disabled')
+                logging.info(f'extension {full_name} could either not be found or is already disabled')
             """)
 
     command = [
