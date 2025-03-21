@@ -1,4 +1,4 @@
-__version__ = '1.5.1'
+__version__ = '1.6.0'
 __author__ = 'ego-lay-atman-bay'
 
 import argparse
@@ -8,52 +8,19 @@ import os
 import pathlib
 import re
 import shutil
-import subprocess
+import sys
+import time
 from textwrap import dedent
+import colorama
+import colorama
 
 import toml
 
-from .constents import BLENDER_PLATFORMS, get_blender_python
+from .blender_utils import (build_extension, check_blender_binary,
+                            install_extension, match_blender_python_version, get_blender_python_version)
+from .constents import BLENDER_PLATFORMS
 from .package_management import download_packages
 
-BLENDER_BINARY = shutil.which('blender')
-
-def check_blender_binary():
-    if BLENDER_BINARY is None:
-        raise FileNotFoundError('Blender could not be found. Make sure to add it to the PATH.')
-    
-    return True
-
-def build_extension(
-    blender_manifest: dict,
-    src: str = './',
-    dest: str = 'dist',
-    output_filepath: str = '{id}-{version}.zip',
-    split_platforms: bool = False,
-):
-    full_path = os.path.join(dest, output_filepath.format(**blender_manifest))
-
-    os.makedirs(os.path.dirname(full_path), exist_ok = True)
-
-    command = [
-        BLENDER_BINARY, '--command', 'extension', 'build',
-        '--source-dir', src,
-        '--output-filepath', full_path,
-    ]
-    
-    build_options = ['valid-tags', 'split-platforms', 'verbose']
-    
-    build: dict = blender_manifest.get('build', {})
-    
-    for build_option in build_options:
-        if build.get(build_option) is not None:
-            command.extend([f'--{build_option}', build[build_option]])
-    
-    subprocess.run(command)
-    
-    if split_platforms:
-        command.append('--split-platforms')
-        subprocess.run(command)
 
 def gather_dependencies(
     blender_manifest: dict,
@@ -160,7 +127,7 @@ def build(
     if python_version is None:
         blender_version_min = blender_manifest.get('blender_version_min', '4.2.0')
         
-        python_version = get_blender_python(blender_version_min)
+        python_version = match_blender_python_version(blender_version_min)
     
     manifest_dir = os.path.dirname(os.path.abspath(manifest_path))
     
@@ -243,83 +210,6 @@ def build(
     
     return os.path.abspath(os.path.join(dist, output_filepath))
 
-def disable_extension(
-    module: str,
-    repo: str = 'user_default',
-):
-    script = """\
-import logging
-
-def setup_logger(level = logging.INFO):
-    if isinstance(level, str):
-        level = logging._nameToLevel.get(level.upper(), logging.INFO)
-    
-    logging.basicConfig(
-        level = level,
-        format = '[%(levelname)s] %(message)s',
-    )
-    logging.captureWarnings(True)
-
-
-
-import bpy
-import sys
-args = sys.argv
-if '--' in args:
-  args = args[args.index('--')+1:]
-module = args[0]
-repo = args[1]
-full_name = f'bl_ext.{repo}.{module}'
-setup_logger(args[2])
-
-try:
-  logging.info(f'Disabling extension {full_name}')
-  bpy.ops.preferences.addon_disable(module=full_name)
-  logging.info(f'Successfully disabled {full_name}')
-except:
-  logging.info(f'extension {full_name} could either not be found or is already disabled')
-"""
-    
-    command = [
-        BLENDER_BINARY, '--quiet', '--background',
-        '--python-expr', script,
-        '--', module, repo, logging._levelToName[logging.root.getEffectiveLevel()],
-    ]
-    
-    subprocess.run(command)
-
-def install(
-    extension_path: str,
-    manifest_path: str,
-    repo: str = 'user_default',
-    enable: bool = False,
-    no_prefs: bool = False,
-):
-    with open(manifest_path, 'r') as file:
-        manifest = toml.load(file)
-
-    disable_extension(
-        manifest.get('id'),
-        repo = repo,
-    )
-    
-    command = [
-        BLENDER_BINARY, '--command', 'extension', 'install-file',
-        extension_path,
-        '--repo', repo,
-    ]
-    if enable:
-        command.append('--enable')
-    if no_prefs:
-        command.append('--no-prefs')
-    
-    logging.info(f'Installing {os.path.relpath(extension_path)}')
-    result = subprocess.run(command)
-    if result.returncode != 0:
-        logging.error(f'Failed to install')
-    else:
-        logging.info('Successfully installed extension')
-
 def merge(files: list[str]):
     raise NotImplementedError()
 
@@ -334,6 +224,8 @@ def setup_logger(level = logging.INFO):
     logging.captureWarnings(True)
     
 def main():
+    colorama.just_fix_windows_console()
+    
     argparser = argparse.ArgumentParser(
         description = 'Build blender extension with dependencies',
     )
@@ -428,6 +320,13 @@ def main():
         logging.error(e)
         exit()
     
+    blender_python_version = get_blender_python_version()
+    python_version = f'{sys.version_info.major}.{sys.version_info.minor}'
+    
+    if blender_python_version != python_version:
+        logging.warning(f'{colorama.Fore.YELLOW}The current python version {python_version} is different from the blender python version {blender_python_version}. If you experience issues building, use the same python version as blender.{colorama.Style.RESET_ALL}')
+        time.sleep(2)
+    
     output = build(
         args.manifest,
         args.dist,
@@ -438,7 +337,7 @@ def main():
     )
 
     if args.install:
-        install(
+        install_extension(
             output,
             manifest_path = args.manifest,
             repo = args.repo,

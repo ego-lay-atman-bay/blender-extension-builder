@@ -6,6 +6,7 @@ import sys
 import tempfile
 from functools import cmp_to_key
 from typing import NamedTuple
+from typing import Literal
 
 import requests
 from packaging.requirements import Requirement
@@ -94,12 +95,13 @@ def download_wheels(
     platforms: list[str] | None = None,
     abis: list[str] | None = None,
     python_version: str | None = '3.11',
+    download_method: Literal['download', 'wheel'] = 'download'
 ):
     result = []
     
     command = [sys.executable, '-m', 'pip', '--isolated', '--disable-pip-version-check']
     
-    download_method = 'download'
+    # download_method = 'download'
     
     if isinstance(packages, str):
         packages = [packages]
@@ -235,14 +237,20 @@ def get_wheel_info(
             if tag.platform:
                 interpreter_tags = parse_python_tag(tag.interpreter)
                 abi_tags = parse_python_tag(tag.abi)
-                
                 compatible = False
+                incompatible_version = False
                 
                 for interpreter in interpreter_tags:
                     if interpreter.version is None or (interpreter.version <= python_version_obj and interpreter.version.major == python_version_obj.major):
                         if interpreter.name in SUPPORTED_INTERPRETERS:
                             compatible = True
+                            incompatible_version = False
                             break
+                    elif interpreter.version is not None and interpreter.version.major != python_version_obj.major:
+                        incompatible_version = True
+                
+                if incompatible_version:
+                    continue
                 
                 for abi in abi_tags:
                     if abi.version is None or (abi.version <= python_version_obj and abi.version.major == python_version_obj.major):
@@ -251,17 +259,15 @@ def get_wheel_info(
                             break
                 
                 if not compatible:
-                    break
+                    continue
                 
-                info['abi'].append(interpreter_tags)
-                info['interpreter'].append(abi_tags)
+                info['abi'].append(abi_tags)
+                info['interpreter'].append(interpreter_tags)
                 info['platform'].add(tag.platform)
 
         
         if compatible:
             available_files.append(info)
-
-        
     
     def file_sorter(
         file1: dict[str, set | list[list[PythonTag]] | str | dict],
@@ -341,6 +347,7 @@ def get_wheel_info(
         else:
             return 1
     
+    
     available_files.sort(key = cmp_to_key(file_sorter))
 
     by_platforms = {}
@@ -406,6 +413,9 @@ def download_packages(
     for i, package in enumerate(packages):
         requirement = Requirement(package)
         requirement.name = NormalizedName(requirement.name)
+        requirement.url = requirement.url.strip()
+        if os.path.exists(requirement.url):
+            requirement.url = f'file://{requirement.url}'
         packages[i] = str(requirement)
     
     if not all_wheels:
@@ -438,6 +448,16 @@ def download_packages(
                 requirement,
                 python_version,
             )
+            if len(wheel_info) == 0:
+                logging.info(f'Could not find satisfactory build for {str(requirement)}, now building from source')
+                for platform in platforms:
+                    packages_by_platform.setdefault(platform, {}).setdefault('names', set()).add(str(requirement))
+                    packages_by_platform.setdefault(platform, {}).setdefault('files', []).append({
+                        'name': requirement.name,
+                        'type': 'url',
+                        'requirement': requirement,
+                    })
+                continue
             by_platform = filter_platform_files(
                 wheel_info,
                 platforms,
@@ -465,7 +485,13 @@ def download_packages(
         for platform, requirements in packages_by_platform.items():
             logging.debug(f'{platform} | {len(requirements["names"])} | {len(requirements["files"])}')
         
-        platforms_to_download = {platform: requirements for platform, requirements in packages_by_platform.items() if len(requirements['names']) >= len(dependencies)}
+        platforms_to_download = {}
+        for platform, requirements in packages_by_platform.items():
+            if len(requirements['names']) >= len(dependencies):
+               platforms_to_download[platform] = requirements
+            else:
+                print('missing', {Requirement(dependency).name for dependency in requirements['names']} ^ {Requirement(dependency).name for dependency in dependencies})
+        # platforms_to_download = {platform: requirements for platform, requirements in packages_by_platform.items() if len(requirements['names']) >= len(dependencies)}
         used_platforms = list(platforms_to_download.keys())
         if 'any' in used_platforms:
             used_platforms.remove('any')
@@ -481,6 +507,7 @@ def download_packages(
                         str(requirement['requirement']),
                         output_folder,
                         no_deps = True,
+                        download_method = 'wheel',
                     ))
                     downloaded_urls.append(str(requirement['requirement']))
                 elif requirement['type'] == 'direct':

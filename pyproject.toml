@@ -21,6 +21,7 @@ dependencies = [
   "packaging",
   "requests",
   "pipgrip",
+  "colorama",
 ]
 dynamic = ["version"]
 
