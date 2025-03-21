@@ -490,7 +490,7 @@ def download_packages(
             if len(requirements['names']) >= len(dependencies):
                platforms_to_download[platform] = requirements
             else:
-                print('missing', {Requirement(dependency).name for dependency in requirements['names']} ^ {Requirement(dependency).name for dependency in dependencies})
+                logging.debug(f"{platform} missing: { {Requirement(dependency).name for dependency in requirements['names']} ^ {Requirement(dependency).name for dependency in dependencies} }")
         # platforms_to_download = {platform: requirements for platform, requirements in packages_by_platform.items() if len(requirements['names']) >= len(dependencies)}
         used_platforms = list(platforms_to_download.keys())
         if 'any' in used_platforms:
