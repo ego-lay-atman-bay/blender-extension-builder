@@ -129,12 +129,35 @@ def disable_extension(
     subprocess.run(command)
 
 
+def uninstall_extension(
+    module: str,
+    repo: str = 'user_default',
+    no_prefs: bool = False,
+    *,
+    blender_binary: str = BLENDER_BINARY,
+):
+    command = [
+        blender_binary, '--command', 'extension', 'remove',
+        f'{repo}.{module}',
+    ]
+    if no_prefs:
+        command.append('--no-prefs')
+
+    logging.info(f'Uninstalling {repo}.{module}')
+    result = subprocess.run(command)
+    if result.returncode != 0:
+        logging.error(f'Failed to remove')
+    else:
+        logging.info('Successfully removed extension')
+
+
 def install_extension(
     extension_path: str,
     manifest_path: str,
     repo: str = 'user_default',
     enable: bool = False,
     no_prefs: bool = False,
+    uninstall: bool = False,
     *,
     blender_binary: str = BLENDER_BINARY,
 ):
@@ -145,6 +168,13 @@ def install_extension(
         manifest.get('id'),
         repo = repo,
     )
+    
+    if uninstall:
+        uninstall_extension(
+            manifest.get('id'),
+            repo = repo,
+            no_prefs = no_prefs,
+        )
 
     command = [
         blender_binary, '--command', 'extension', 'install-file',

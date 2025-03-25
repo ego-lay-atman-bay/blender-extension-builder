@@ -309,6 +309,12 @@ def main():
         action = 'store_true',
         help = 'Treat the user-preferences as read-only, preventing updates for operations that would otherwise modify them. This means removing extensions or repositories for example, wont update the user-preferences.',
     )
+    install_parser.add_argument(
+        '-u', '--uninstall',
+        dest = 'uninstall',
+        action = 'store_true',
+        help = 'Uninstall extension before installing it again (can fix errors when updating).'
+    )
     
     args = argparser.parse_args()
     
@@ -343,6 +349,7 @@ def main():
             repo = args.repo,
             enable = args.enable,
             no_prefs = args.no_prefs,
+            uninstall = args.uninstall,
         )
     
 if __name__ == "__main__":
