@@ -29,6 +29,7 @@ def gather_dependencies(
     ensure_cp311: bool | None = None,
     all_wheels: bool = False,
     python_version: str = '3.11',
+    no_cache: bool = False,
 ):
 
     if os.path.exists(os.path.join(build, wheel_dir)):
@@ -49,6 +50,7 @@ def gather_dependencies(
             dependencies,
             dir,
             no_deps = False,
+            no_cache = no_cache,
             all_wheels = all_wheels,
             python_version = python_version,
             platforms = platforms,
@@ -97,6 +99,7 @@ def build(
     all_wheels: bool = False,
     split_platforms: bool = False,
     python_version: str | None = '3.11',
+    no_cache: bool = False,
 ) -> str:
     """Build blender extension
 
@@ -190,6 +193,7 @@ def build(
         ensure_cp311 = ensure_cp311,
         all_wheels = all_wheels,
         python_version = python_version,
+        no_cache = no_cache,
     )
 
     if blender_manifest.get('build', {}).get('paths') is not None and blender_manifest.get('build', {}).get('paths_exclude_pattern') is not None:
@@ -280,6 +284,12 @@ def main():
         dest = 'python_version',
         help = 'Python version to use. Defaults to the python version the minimum blender version uses (most likely 3.11).',
     )
+    argparser.add_argument(
+        '--no-cache',
+        dest = 'no_cache',
+        action = 'store_true',
+        help = "Don't cache wheels",
+    )
     
     install_parser = argparser.add_argument_group(
         'Install options',
@@ -340,6 +350,7 @@ def main():
         all_wheels = args.all_wheels,
         split_platforms = args.split_platforms,
         python_version = args.python_version,
+        no_cache = args.no_cache,
     )
 
     if args.install:

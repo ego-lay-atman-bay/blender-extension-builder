@@ -92,10 +92,11 @@ def download_wheels(
     packages: str | list[str],
     output_folder: str = './',
     no_deps: bool = False,
+    no_cache: bool = False,
     platforms: list[str] | None = None,
     abis: list[str] | None = None,
     python_version: str | None = '3.11',
-    download_method: Literal['download', 'wheel'] = 'download'
+    download_method: Literal['download', 'wheel'] = 'download',
 ):
     result = []
     
@@ -109,7 +110,7 @@ def download_wheels(
     for i, package in enumerate(packages):
         package = Requirement(package)
         if package.url:
-            packages[i] = package.url
+            # packages[i] = package.url
             download_method = 'wheel'
     
     with tempfile.TemporaryDirectory() as tempdir:
@@ -118,10 +119,14 @@ def download_wheels(
             
             if no_deps:
                 command.append('--no-deps')
+            if no_cache:
+                command.append('--no-cache')
 
             command.extend(['-w', tempdir])
         else:
             command.extend(['download', '--dest', tempdir, '--only-binary', ':all:'])
+            if no_cache:
+                command.append('--no-cache')
             if python_version is not None:
                 command.extend(['--python-version', python_version])
             if platforms is not None:
@@ -399,6 +404,7 @@ def download_packages(
     packages: str | list[str],
     output_folder: str = './',
     no_deps: bool = False,
+    no_cache: bool = False,
     all_wheels: bool = False,
     platforms: list[str] | None = None,
     python_version: str = '3.11',
@@ -423,6 +429,7 @@ def download_packages(
             packages,
             output_folder,
             no_deps = no_deps,
+            no_cache = no_cache,
             python_version = python_version,
         )
         result.extend(wheels)
@@ -507,6 +514,7 @@ def download_packages(
                         str(requirement['requirement']),
                         output_folder,
                         no_deps = True,
+                        no_cache = no_cache,
                         download_method = 'wheel',
                     ))
                     downloaded_urls.append(str(requirement['requirement']))
