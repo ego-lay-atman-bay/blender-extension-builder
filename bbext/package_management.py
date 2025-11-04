@@ -159,7 +159,7 @@ def download_wheels(
                 os.remove(os.path.join(output_folder, wheel))
             
             try:
-                os.rename(
+                shutil.move(
                     os.path.join(tempdir, wheel),
                     os.path.join(output_folder, wheel),
                 )
@@ -413,15 +413,18 @@ def download_packages(
     used_platforms = platforms.copy()
     python_version_obj = Version(python_version)
 
+    os.makedirs(output_folder, exist_ok = True)
+
     if platforms is None:
         platforms = BLENDER_PLATFORMS.copy()
-    
+
     for i, package in enumerate(packages):
         requirement = Requirement(package)
         requirement.name = NormalizedName(requirement.name)
-        requirement.url = requirement.url.strip()
-        if os.path.exists(requirement.url):
-            requirement.url = f'file://{requirement.url}'
+        if requirement.url is not None:
+            requirement.url = requirement.url.strip()
+            if os.path.exists(requirement.url):
+                requirement.url = f'file://{requirement.url}'
         packages[i] = str(requirement)
     
     if not all_wheels:
