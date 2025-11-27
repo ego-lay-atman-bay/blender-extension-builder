@@ -418,6 +418,9 @@ def download_packages(
     if platforms is None:
         platforms = BLENDER_PLATFORMS.copy()
 
+    if not isinstance(packages, list):
+        raise TypeError(f"Dependencies must be a list of strings. Got: {type(packages).__name__}")
+
     processed_packages = []
     for package in packages:
         requirement = Requirement(package)
