@@ -418,14 +418,16 @@ def download_packages(
     if platforms is None:
         platforms = BLENDER_PLATFORMS.copy()
 
-    for i, package in enumerate(packages):
+    processed_packages = []
+    for package in packages:
         requirement = Requirement(package)
         requirement.name = NormalizedName(requirement.name)
         if requirement.url is not None:
             requirement.url = requirement.url.strip()
             if os.path.exists(requirement.url):
                 requirement.url = f'file://{requirement.url}'
-        packages[i] = str(requirement)
+        processed_packages.append(str(requirement))
+    packages = processed_packages
     
     if not all_wheels:
         wheels = download_wheels(
