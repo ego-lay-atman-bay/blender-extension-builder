@@ -12,7 +12,6 @@ import sys
 import time
 from textwrap import dedent
 import colorama
-import colorama
 
 import toml
 
