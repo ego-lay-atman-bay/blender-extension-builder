@@ -32,9 +32,9 @@ SUPPORTED_INTERPRETERS = [
 ]
 
 class PythonTag(NamedTuple):
-    name: str
+    name: str | None
     version: Version | None
-    extra: str
+    extra: str | None
 
 def parse_python_tag(tag: str):
     interpreter = ''
@@ -98,7 +98,7 @@ def download_wheels(
     python_version: str | None = '3.11',
     download_method: Literal['download', 'wheel'] = 'download',
 ):
-    result = []
+    result: list[str] = []
     
     command = [sys.executable, '-m', 'pip', '--isolated', '--disable-pip-version-check']
     
@@ -366,25 +366,25 @@ def filter_platform_files(
     files: dict[str, list[dict[str, set | list[list[PythonTag]] | str | dict]]],
     platforms: list[str] | None = None,
 ):
-    result = {}
+    result: dict[str, list[str]] = {}
     if platforms is None:
         platforms = BLENDER_PLATFORMS.copy()
     
     def get_blender_platform(platform: str):
-        accepted_platforms = []
+        accepted_platforms: list[str] = []
         if 'linux' in platform:
             if 'x86' in platform:
-                accepted_platforms.append(BlenderPlatform.linux_x64)
+                accepted_platforms.append(str(BlenderPlatform.linux_x64))
         if 'win' in platform:
             if '32' in platform or 'amd64' in platform:
-                accepted_platforms.append(BlenderPlatform.windows_x64)
+                accepted_platforms.append(str(BlenderPlatform.windows_x64))
             if 'arm64' in platform:
-                accepted_platforms.append(BlenderPlatform.windows_arm64)
+                accepted_platforms.append(str(BlenderPlatform.windows_arm64))
         if 'macosx' in platform:
             if 'x86' in platform or 'universal' in platform:
-                accepted_platforms.append(BlenderPlatform.macos_x64)
+                accepted_platforms.append(str(BlenderPlatform.macos_x64))
             if 'arm64' in platform or 'universal' in platform:
-                accepted_platforms.append(BlenderPlatform.macos_arm64)
+                accepted_platforms.append(str(BlenderPlatform.macos_arm64))
         
         if platform == 'any':
             accepted_platforms.append('any')
@@ -409,14 +409,15 @@ def download_packages(
     platforms: list[str] | None = None,
     python_version: str = '3.11',
 ):
-    result = []
-    used_platforms = platforms.copy()
+    downloaded_wheels: list[str] = []
     python_version_obj = Version(python_version)
 
     os.makedirs(output_folder, exist_ok = True)
 
     if platforms is None:
         platforms = BLENDER_PLATFORMS.copy()
+    
+    used_platforms = platforms.copy()
 
     if not isinstance(packages, list):
         raise TypeError(f"Dependencies must be a list of strings. Got: {type(packages).__name__}")
@@ -440,11 +441,11 @@ def download_packages(
             no_cache = no_cache,
             python_version = python_version,
         )
-        result.extend(wheels)
+        downloaded_wheels.extend(wheels)
     else:
         logging.info('gathering dependencies')
         dependencies = get_dependencies(packages)
-        packages_by_platform: dict[str, list[dict]] = {}
+        packages_by_platform: dict[str, dict] = {}
 
         for dependency in dependencies:
             requirement = Requirement(dependency)
@@ -500,7 +501,7 @@ def download_packages(
         for platform, requirements in packages_by_platform.items():
             logging.debug(f'{platform} | {len(requirements["names"])} | {len(requirements["files"])}')
         
-        platforms_to_download = {}
+        platforms_to_download: dict[str, dict] = {}
         for platform, requirements in packages_by_platform.items():
             if len(requirements['names']) >= len(dependencies):
                platforms_to_download[platform] = requirements
@@ -518,7 +519,7 @@ def download_packages(
                 if requirement['type'] == 'url':
                     if str(requirement['requirement']) in downloaded_urls:
                         continue
-                    result.extend(download_wheels(
+                    downloaded_wheels.extend(download_wheels(
                         str(requirement['requirement']),
                         output_folder,
                         no_deps = True,
@@ -530,7 +531,7 @@ def download_packages(
                     for files in requirement['wheels']:
                         wheel = files[0]
                         output_filename = os.path.join(output_folder, wheel['info']['filename'])
-                        if output_filename in result:
+                        if output_filename in downloaded_wheels:
                             logging.debug(f'{output_filename} already downloaded')
                             continue
                         
@@ -538,7 +539,7 @@ def download_packages(
                         data = download_url(wheel['info']['url'])
                         with open(output_filename, 'wb') as file:
                             file.write(data)
-                        result.append(output_filename)
+                        downloaded_wheels.append(output_filename)
         
                         
                 # 
@@ -551,4 +552,4 @@ def download_packages(
                 #     python_version = python_version,
                 # ))
     
-    return result, used_platforms
+    return downloaded_wheels, [str(platform) for platform in used_platforms]
