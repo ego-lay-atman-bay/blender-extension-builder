@@ -19,6 +19,7 @@ class BlenderPlatform(StrEnum):
     linux_x64 = 'linux-x64'
 
 BLENDER_PYTHON_VERSIONS = {
-    Version('4.2.0'): Version('3.11')
+    Version('4.2.0'): Version('3.11'),
+    Version('5.1.0'): Version('3.13'),
 }
 
