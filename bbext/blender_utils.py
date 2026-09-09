@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 from textwrap import dedent
+import re
 
 import toml
 from packaging.version import Version
@@ -38,13 +39,15 @@ def get_blender_python_version(blender_binary: str = BLENDER_BINARY):
             blender_binary, '--quiet', '--background', '--factory-startup',
             '--python-expr', dedent("""\
                 from sys import version_info
-                print(f'{version_info.major}.{version_info.minor}')
+                print(f'bbext_PYVER:{version_info.major}.{version_info.minor}')
             """)
         ],
-        capture_output = True,
+        stdout = subprocess.PIPE,
+        stderr = subprocess.DEVNULL,
         text = True,
     )
-    return result.stdout.strip()
+    match = re.search(r"bbext_PYVER:(\d+\.\d+)", result.stdout.strip())
+    return match.group(1) if match else None
 
 
 def build_extension(
