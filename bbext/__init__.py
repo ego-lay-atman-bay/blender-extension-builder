@@ -68,7 +68,7 @@ def gather_dependencies(
             root_dir = dir,
         ):
             source = wheel
-            dest = re.sub('cp\d+', 'cp311', wheel)
+            dest = re.sub(r'cp\d+', 'cp311', wheel)
 
             if source in wheels:
                 wheels[wheels.index(source)] = dest
@@ -289,6 +289,18 @@ def main():
         action = 'store_true',
         help = "Don't cache wheels",
     )
+    argparser.add_argument(
+        '-y',
+        dest = 'yes',
+        action = 'store_true',
+        help = 'Accept prompts',
+    )
+    argparser.add_argument(
+        '-n',
+        dest = 'no',
+        action = 'store_true',
+        help = 'Deny prompts',
+    )
     
     install_parser = argparser.add_argument_group(
         'Install options',
@@ -339,8 +351,13 @@ def main():
     python_version = f'{sys.version_info.major}.{sys.version_info.minor}'
     
     if blender_python_version != python_version:
-        logging.warning(f'{colorama.Fore.YELLOW}The current python version {python_version} is different from the blender python version {blender_python_version}. If you experience issues building, use the same python version as blender.{colorama.Style.RESET_ALL}')
-        time.sleep(2)
+        print(f'{colorama.Fore.YELLOW}The current python version {python_version} is different from the blender python version {blender_python_version}. You may experience issues when building or running.{colorama.Style.RESET_ALL}')
+        if args.no:
+            print(f'{colorama.Fore.RED}Exiting{colorama.Fore.RESET}')
+            return
+        
+        if not args.yes and (input('Do you wish to continue? (y/N): ').lower() not in ['y', 'yes', 't', 'true']):
+            return
     
     output = build(
         args.manifest,
