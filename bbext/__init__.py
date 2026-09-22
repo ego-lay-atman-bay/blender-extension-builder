@@ -179,7 +179,7 @@ def build(
     if isinstance(raw_dependencies, str):
         if os.path.isfile(os.path.join(manifest_dir, raw_dependencies)):
             with open(os.path.join(manifest_dir, raw_dependencies), 'r') as file_in:
-                dependencies = file_in.readlines()
+                dependencies = [dep.strip() for dep in file_in.readlines()]
             
             blender_manifest['dependencies'] = dependencies
         else:
@@ -251,6 +251,12 @@ def main():
         '-d', '--dist',
         dest = 'dist',
         help = 'override dist folder',
+    )
+
+    argparser.add_argument(
+        '-o', '--output', '--filename',
+        dest = 'filename',
+        help = 'Override output filename'
     )
     
     argparser.add_argument(
